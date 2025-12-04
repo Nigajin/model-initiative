@@ -1,14 +1,21 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { ChatMessage, GeneratedQuest } from "../types";
 
-const apiKey = process.env.API_KEY || '';
-const ai = new GoogleGenAI({ apiKey });
-
 const MODEL_NAME = 'gemini-2.5-flash';
 
+const getAiClient = () => {
+  const apiKey = process.env.API_KEY || '';
+  // Note: In some environments, we might want to throw if key is missing,
+  // but here we handle it gracefully in the calling functions.
+  return new GoogleGenAI({ apiKey });
+};
+
 export const generateQuests = async (mood: string, energyLevel: number): Promise<GeneratedQuest[]> => {
+  const apiKey = process.env.API_KEY;
   if (!apiKey) return fallbackQuests();
 
+  const ai = getAiClient();
+  
   const prompt = `
     사용자의 현재 기분은 "${mood}"이고, 에너지 레벨은 10점 만점에 ${energyLevel}점입니다.
     이 사용자는 사회적으로 고립되어 있거나 무기력함을 느끼고 있을 수 있습니다.
@@ -51,7 +58,10 @@ export const generateQuests = async (mood: string, energyLevel: number): Promise
 };
 
 export const chatWithAiCoach = async (history: ChatMessage[], newMessage: string): Promise<string> => {
+  const apiKey = process.env.API_KEY;
   if (!apiKey) return "API 키가 설정되지 않았습니다. 잠시 후 다시 시도해주세요.";
+
+  const ai = getAiClient();
 
   // Format history for the API
   const pastContents = history.map(msg => ({

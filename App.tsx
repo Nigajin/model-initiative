@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Home, ListTodo, MessageCircleHeart, Timer } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Home, ListTodo, MessageCircleHeart, Timer, Sparkles } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import QuestBoard from './components/QuestBoard';
 import AICoach from './components/AICoach';
@@ -8,6 +8,8 @@ import { AppView, UserState } from './types';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>(AppView.DASHBOARD);
+  const [hasApiKey, setHasApiKey] = useState(false);
+  const [checkingKey, setCheckingKey] = useState(true);
   
   // Mock initial user state
   const [userState, setUserState] = useState<UserState>({
@@ -24,6 +26,38 @@ const App: React.FC = () => {
     ],
   });
 
+  useEffect(() => {
+    const checkKey = async () => {
+      // Check if window.aistudio exists and if key is selected
+      if (window.aistudio && window.aistudio.hasSelectedApiKey) {
+        const hasKey = await window.aistudio.hasSelectedApiKey();
+        setHasApiKey(hasKey);
+      } else {
+        // Fallback for local dev or if aistudio is not injected
+        if (process.env.API_KEY) {
+            setHasApiKey(true);
+        }
+      }
+      setCheckingKey(false);
+    };
+    checkKey();
+  }, []);
+
+  const handleSelectKey = async () => {
+    if (window.aistudio && window.aistudio.openSelectKey) {
+      try {
+        await window.aistudio.openSelectKey();
+        setHasApiKey(true);
+      } catch (e) {
+        console.error("Failed to select key", e);
+        // If "Requested entity was not found" error occurs, retry might be needed by user
+        alert("키 선택 중 오류가 발생했습니다. 다시 시도해주세요.");
+      }
+    } else {
+      alert("API Key 선택 기능을 사용할 수 없는 환경입니다.");
+    }
+  };
+
   const handleCompleteQuest = (xp: number) => {
     setUserState(prev => {
       let newXp = prev.currentXp + xp;
@@ -34,7 +68,6 @@ const App: React.FC = () => {
         newLevel += 1;
         newXp = newXp - nextXp;
         nextXp = Math.floor(nextXp * 1.2);
-        // Could trigger level up modal here
         alert(`축하합니다! 레벨 ${newLevel}로 성장했어요! 🎉`);
       }
 
@@ -61,6 +94,46 @@ const App: React.FC = () => {
         return <Dashboard userState={userState} />;
     }
   };
+
+  if (checkingKey) {
+    return (
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+      </div>
+    );
+  }
+
+  if (!hasApiKey) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-8 text-center space-y-6">
+          <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Sparkles className="w-10 h-10 text-indigo-500" />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-800">HaruStep에 오신 것을 환영해요</h1>
+          <p className="text-slate-600">
+            당신의 작은 발걸음을 응원합니다.<br/>
+            AI 코치 '하루'와 함께 시작해보세요.
+          </p>
+          <div className="pt-4">
+            <button
+              onClick={handleSelectKey}
+              className="w-full py-4 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl transition-all transform hover:scale-[1.02] shadow-lg shadow-indigo-200"
+            >
+              Google API Key로 시작하기
+            </button>
+            <p className="text-xs text-slate-400 mt-4">
+              AI 모델 사용을 위해 Google Cloud API Key가 필요합니다.
+              <br />
+              <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="underline hover:text-indigo-500">
+                과금 정책 확인하기
+              </a>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-0 sm:p-4 md:p-6 font-sans text-slate-800">
@@ -101,7 +174,7 @@ const App: React.FC = () => {
             icon={<Timer className="w-6 h-6" />}
             label="집중"
           />
-          {/* Profile placeholder - could be settings */}
+          {/* Profile placeholder */}
           <button className="flex flex-col items-center justify-center w-12 text-slate-300">
             <div className="w-6 h-6 rounded-full bg-slate-200 mb-1"></div>
             <span className="text-[10px] font-medium">나</span>
