@@ -42,15 +42,3 @@ export interface GeneratedQuest {
   difficulty: string;
   xp: number;
 }
-
-// Global declaration for window.aistudio
-declare global {
-  interface AIStudio {
-    hasSelectedApiKey: () => Promise<boolean>;
-    openSelectKey: () => Promise<void>;
-  }
-
-  interface Window {
-    aistudio?: AIStudio;
-  }
-}
